@@ -16,6 +16,7 @@
     "async": "^1.5.0",
     "cheerio-httpcli": "^0.3.8",
     "fs.extra": "^1.3.2",
+    "jconv": "^0.1.5",
     "lodash": "^3.10.1",
     "prompt": "^0.2.14",
     "to-markdown": "^2.0.1"
