@@ -1,4 +1,5 @@
-var cheerio = require('cheerio-httpcli');
+var $ = require('cheerio');
+var client = require('cheerio-httpcli');
 var _ = require('lodash');
 var md = require('to-markdown');
 var fs = require('fs.extra');
@@ -10,11 +11,12 @@ var ecl = require('./ecl');
 var jconv = require('jconv');
 
 var convertToMarkdown = function(addr, cb){
-  cheerio.fetch(addr, {}, 'euc-jp', function(err, $){
+  client.fetch(addr, {}, 'euc-jp', function(err, $){
     if(err)  return cb(null, err);
-    var body = $('td[valign="top"]:not(.menu-strip)');
+    var body =  _.map($('td[valign="top"]:not(.menu-strip)').children(),
+                      function(e){ return $(e).html();}).join();
     var mdoption = {
-//      gfm: true,
+      gfm: true,
       converters: [
         {
           filter: 'a',
@@ -26,28 +28,44 @@ var convertToMarkdown = function(addr, cb){
             }
             return '[' + html + '](' + href + ')';
           }
+        },
+        {
+          filter: ['tr'],
+          replacement: function(html, node){
+            var prev_tr = $(node).prev();
+            if (prev_tr) {
+              return '\n' + html;
+            } else {
+              var boarder = '\n';
+              for (var i = 0; i < $(node).children().length; ++i){
+                boarder += '|---';
+              }
+              boarder += '|';
+              return '\n' + html + boarder;
+            }
+          }
         }
       ]
     };
     var enc = $.documentInfo().encoding;
-    var bodystr = body.html();
-    if (enc !== 'euc-jp') {
-      console.log('encode detection failed. convert from euc-jp');
-      bodystr = jconv.decode(b, 'EUCJP').toString();
-    }
+    var bodystr = body;
     var mdbody = md(bodystr, mdoption);
-    return cb(mdbody, null);
+    header = '---\nformat: markdown\ntoc: no\n...\n\n';
+    return cb(header + mdbody, null);
   });
 };
 
 var main = function(){
-  prompt.start();
-  prompt.get({
-    properties: {
-      username: { required: true },
-      password: { hidden: true, required: true }
-    }}, function(err, argv){
-      if(err) return console.log(err);
+  // prompt.start();
+  // prompt.get({
+  //   properties: {
+  //     username: { required: true },
+  //     password: { hidden: true, required: true }
+  //   }}, function(err, argv){
+  //     if(err) return console.log(err);
+  var argv = {
+    username: "jskgl", password: "jskuma"
+  };
       var base_url = 'http://www.jsk.t.u-tokyo.ac.jp/wiliki/';
       var out_dir = 'output';
       var max_conn = 10;
@@ -59,18 +77,18 @@ var main = function(){
       fs.mkdir(out_dir);
 
       // client settings
-      cheerio.headers['Authorization'] = 'Basic ' +
+      client.headers['Authorization'] = 'Basic ' +
         new Buffer(argv.username + ':' + argv.password).toString('base64');
-      cheerio.setBrowser('chrome');
-      cheerio.timeout = 1000000;
+      client.setBrowser('chrome');
+      client.timeout = 1000000;
 
       // walk and convert all pages to markdown
       var index_url = base_url + 'wiliki.cgi?c=a';
       console.log('fetching index from ' + index_url);
-      cheerio.fetch(index_url, function(err, $){
+      client.fetch(index_url, function(err, $){
         if(err)  return console.log(err);
         console.log('converting articles to markdown with ' + max_conn + ' connections');
-        async.eachLimit($('td[valign="top"]:not(.menu-strip) ul li a'), max_conn, function(a, cb){
+        async.eachLimit($('td[valign="top"]:not(.menu-strip) ul li a')[:0], max_conn, function(a, cb){
           var href = a.attribs['href'];
           var page_name = href.replace(/^wiliki.cgi\?/, "");
           if (page_name.startsWith('http')) {
@@ -102,7 +120,7 @@ var main = function(){
                        if (err) console.log(err);
                      });
       });
-    });
+  //   });
 };
 
 main();

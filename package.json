@@ -4,7 +4,8 @@
   "description": "converter from wiliki to markdown",
   "main": "app.js",
   "scripts": {
-    "start": "node app.js"
+    "start": "node app.js",
+    "test": "node debug app.js"
   },
   "repository": {
     "type": "git",
@@ -14,6 +15,7 @@
   "license": "MIT",
   "dependencies": {
     "async": "^1.5.0",
+    "cheerio": "^0.19.0",
     "cheerio-httpcli": "^0.3.8",
     "fs.extra": "^1.3.2",
     "jconv": "^0.1.5",
